@@ -117,23 +117,115 @@ $(function () {
 				  image: images.dresses,
 				  draggable: false
 				});
+				card.player = p;
+				card.item_value = data.game_state.players[p].dresses[d];
+
 				if (data.my_id == data.game_state.player_turn && data.game_state.players[data.my_id].action == 'exchange dress') {
 					card.on('dragstart', function () {
 						// store the original position.
 						game.drag_start_x = this.getX();
 						game.drag_start_y = this.getY();
-						game.player_piece = p;
-
 					});
 
 					card.on('dragend', function () { 
 
-						//socket.emit('exchange dress', {});	
-						//console.log("button1 x=" + this.getX() + " y=" + this.getY());
+						// upper left quadrant
+						if (this.getX() < 320 && this.getY() < 320) {
+							if (this.player != game.game_state.player_order[0]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].dresses.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange dress', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange dress', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+						// upper right quadrant
+						if (this.getX() >= 320 && this.getX() < 640 && this.getY() < 320) {
+							if (this.player != game.game_state.player_order[1]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].dresses.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange dress', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange dress', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+						// lower left quadrant
+						if (this.getX() < 320 && this.getY() >= 320) {
+							if (this.player != game.game_state.player_order[2]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].dresses.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange dress', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange dress', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+						// lower right quadrant
+						if (this.getX() >= 320 && this.getX() < 640 && this.getY() >= 320) {
+							if (this.player != game.game_state.player_order[3]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].dresses.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange dress', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange dress', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
 					});
-					card.setDraggable("true");
+
+					// if i have dresses then i can only drag mine to initiate an exchange
+					// but if I do not have any, then I can drag a dress from another player
+					if (game.game_state.players[game.my_id].dresses.length == 0) {  
+						card.setDraggable("true");
+					} else {
+						// this is my dress so I can drag it to initiate an exchange
+						if (p == game.my_id) {
+							card.setDraggable("true");
+						}
+					}
 				}
-				game.cardsLayer.add(card);
 				counter++;
 			}
 
@@ -172,50 +264,115 @@ $(function () {
 				  image: images.shoes,
 				  draggable: false
 				});
+				card.player = p;
+				card.item_value = data.game_state.players[p].shoes[d];
+
 				if (data.my_id == data.game_state.player_turn && data.game_state.players[data.my_id].action == 'exchange shoes') {
 					card.on('dragstart', function () {
 						// store the original position.
 						game.drag_start_x = this.getX();
 						game.drag_start_y = this.getY();
-						game.player_piece = p;
-
 					});
+
 					card.on('dragend', function () { 
-						if (this.getX() < 320) {
-							// left quadrant
-							if (this.getY() < 320) {
-								if (game.player_piece != data.game_state.player_order[0]) {
-									socket.emit('exchange shoes', 
-										{exchange_player: (game.player_piece == data.my_id ? data.game_state.player_order[0] : game.player_piece), shoes_id: data.game_state.players[p].shoes[d]});
-								}
 
-							} else {
-								socket.emit('exchange shoes', {exchange_player: data.game_state.player_order[2], shoes_id: data.game_state.players[p].shoes[d]});
-							}
-
-						} else {
-							if (this.getX() < 640) {
-								// right quadrant
-								if (this.getY() < 320) {
-									socket.emit('exchange shoes', {exchange_player: data.game_state.player_order[1], shoes_id: data.game_state.players[p].shoes[d]});
-
+						// upper left quadrant
+						if (this.getX() < 320 && this.getY() < 320) {
+							if (this.player != game.game_state.player_order[0]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].shoes.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange shoes', 
+											{exchange_player: this.player, item_id: ""});
+									} 
 								} else {
-									socket.emit('exchange shoes', {exchange_player: data.game_state.player_order[3], shoes_id: data.game_state.players[p].shoes[d]});
+									socket.emit('exchange shoes', 
+										{exchange_player: this.player, item_id: this.item_value});
 								}
 							} else {
 								// reset
 								this.setX(game.drag_start_x);
 								this.setY(game.drag_start_y);
 							}
-
 						}
-						//socket.emit('exchange shoes', {});	
-						//console.log("button1 x=" + this.getX() + " y=" + this.getY());
-					});
-					card.setDraggable("true");
-				}
-				game.cardsLayer.add(card);
 
+						// upper right quadrant
+						if (this.getX() >= 320 && this.getX() < 640 && this.getY() < 320) {
+							if (this.player != game.game_state.player_order[1]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].shoes.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange shoes', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange shoes', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+						// lower left quadrant
+						if (this.getX() < 320 && this.getY() >= 320) {
+							if (this.player != game.game_state.player_order[2]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].shoes.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange shoes', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange shoes', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+						// lower right quadrant
+						if (this.getX() >= 320 && this.getX() < 640 && this.getY() >= 320) {
+							if (this.player != game.game_state.player_order[3]) {
+								if (this.player != game.my_id) {
+									// not my piece
+									if (game.game_state.players[game.my_id].shoes.length == 0) {
+										// i don't have any, so i am getting one from another player.
+										socket.emit('exchange shoes', 
+											{exchange_player: this.player, item_id: ""});
+									} 
+								} else {
+									socket.emit('exchange shoes', 
+										{exchange_player: this.player, item_id: this.item_value});
+								}
+							} else {
+								// reset
+								this.setX(game.drag_start_x);
+								this.setY(game.drag_start_y);
+							}
+						}
+
+					});
+
+					// if i have shoes then i can only drag mine to initiate an exchange
+					// but if I do not have any, then I can drag a shoes piece from another player
+					if (game.game_state.players[game.my_id].shoes.length == 0) {  
+						card.setDraggable("true");
+					} else {
+						// this is my shoes piece so I can drag it to initiate an exchange
+						if (p == game.my_id) {
+							card.setDraggable("true");
+						}
+					}
+				}
 				counter++;
 			}
 

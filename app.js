@@ -168,7 +168,24 @@ function onRoll() {
 	if (this.id == g.player_turn && g.players[this.id].action  == "Roll") {
 		console.log("It is " + g.players[this.id].name + "'s turn to roll.");
 
-		var actions = ['exchange shoes', 'exchange dress'];
+		var actions = [];
+		var num_shoes = 0;
+		var num_dresses = 0;
+
+		for (p in g.players)
+		{
+			num_shoes += g.players[p].shoes.length;
+			num_dresses += g.players[p].dresses.length;
+		}
+
+		if (num_shoes > 0) {
+			actions.push('exchange shoes');
+		}
+
+		if (num_dresses > 0) {
+			actions.push('exchange dress');
+		}
+
 		if (g.dresses.length > 0) {
 			actions.push('get dress');
 		}
@@ -199,30 +216,47 @@ function nextPlayer() {
 
 function onExchangeDress(data) {
 	console.log(g.players[this.id].name + " is trying to exchange a dress.");
+	console.log('exchange player:' + data.exchange_player);
+	console.log('exchange item:' + data.item_id);
 
 	if (this.id == g.player_turn && g.players[this.id].action  == "exchange dress") {
-		if (g.players[data.exchange_player]) {
+		if (g.player_order.indexOf(data.exchange_player) >= 0) {
 			if (g.players[data.exchange_player].dresses.length > 0) {
+				// then the exchange player will have to pick a dress to exchange
 			} else {
 				// player has no dresses
-				if (g.players[this.id].dresses.indexOf(data.dress_id) >= 0) {
-					// this player has send a valid dress that they own
-					g.players[data.exchange_player].dresses.push( data.dress_id);
-					g.players[this.id].dresses.splice( g.players[this.id].dresses.indexOf(data.dress_id),1);
+				if (g.players[this.id].dresses.indexOf(data.item_id) >= 0) {
+					// this player has sent a valid dress that they own
+					g.players[data.exchange_player].dresses.push( data.item_id );
+					g.players[this.id].dresses.splice( g.players[this.id].dresses.indexOf(data.item_id),1);
 					nextPlayer();
 				}
 			}
-
 		}
-
 	}
-
+	sendUpdates();
 }
+
 function onExchangeShoes(data) {
 	console.log(g.players[this.id].name + " is trying to exchange shoes.");
+	console.log('exchange player:' + data.exchange_player);
+	console.log('exchange item:' + data.item_id);
 	if (this.id == g.player_turn && g.players[this.id].action  == "exchange shoes") {
+		if (g.player_order.indexOf(data.exchange_player) >= 0) {
+			if (g.players[data.exchange_player].shoes.length > 0) {
+				// then the exchange player will have to pick shoes to exchange
+			} else {
+				// player has no shoes
+				if (g.players[this.id].shoes.indexOf(data.item_id) >= 0) {
+					// this player has sent a valid shoes id that they own
+					g.players[data.exchange_player].shoes.push( data.item_id);
+					g.players[this.id].shoes.splice( g.players[this.id].shoes.indexOf(data.item_id),1);
+					nextPlayer();
+				}
+			}
+		}
 	}
-	
+	sendUpdates();
 }
 
 function onGetDress() {

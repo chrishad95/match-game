@@ -41,27 +41,10 @@ io.sockets.on('connection', function (socket) {
 	sockets[socket.id] = socket;
 
 	console.log("socket connected: " + socket.id);
-	g.clients[socket.id] = {name: "player" + g.num_clients++};
-	if (g.num_players < g.max_players) {
-		g.num_players++;
-		// set up a new player
-		g.players[socket.id] = new Player(socket.id);
-		g.players[socket.id].name = g.clients[socket.id].name;
-		g.players[socket.id].disconnected = false;
 
-		if (g.num_players >= g.min_players && g.game_started == false)
-		{
-			if(timeout) {
-				console.log(socket.id + ": Timeout is already set, game will start soon.");
-				socket.emit("alert", {message: "Game will start soon."});
-			} else {
-				console.log("Game will start in 15 seconds.");
-				socket.emit("alert", {message: "Game will start in 15 seconds."});
-
-				timeout = setInterval(startGame, 3000);
-			}
-		}
-	}
+	socket.emit ('get_id', {id: socket.id});
+	socket.on('set_id', onSetId);
+	
 
 	socket.on('disconnect', onDisconnect );
 	socket.on('update', onUpdate );
@@ -72,6 +55,48 @@ io.sockets.on('connection', function (socket) {
 	socket.on('exchange dress', onExchangeDress );
 
 });
+
+function onSetId(data) {
+	console.log("Player is setting his id. player_id:" + data.id + " socket: " + this.id);
+
+	var found_player = false;
+	for (p in g.players) {
+		if (g.players[p].disconnected) {
+			if (p == data.id) {
+				// this player is reconnecting on this socket
+				var new_player = g.players[p];
+				delete g.players[p];
+				g.players[this.id] =  new_player;
+				g.players[this.id].id = this.id;
+				g.player_order[new_player.order] = this.id;
+				g.players[this.id].disconnected = false;
+				found_player = true;
+			}
+		}
+	}
+	if (!found_player) {
+		g.clients[this.id] = {name: "player" + g.num_clients++};
+		if (g.num_players < g.max_players) {
+			g.num_players++;
+			// set up a new player
+			g.players[this.id] = new Player(this.id);
+			g.players[this.id].name = g.clients[this.id].name;
+			g.players[this.id].disconnected = false;
+
+			if (g.num_players >= g.min_players && g.game_started == false)
+			{
+				if(timeout) {
+					console.log(this.id + ": Timeout is already set, game will start soon.");
+					this.emit("alert", {message: "Game will start soon."});
+				} else {
+					console.log("Game will start in 15 seconds.");
+					this.emit("alert", {message: "Game will start in 15 seconds."});
+					timeout = setInterval(startGame, 3000);
+				}
+			}
+		}
+	}
+}
 
 function startGame() {
 	console.log("Starting the game.");
@@ -179,11 +204,11 @@ function onRoll() {
 		}
 
 		if (num_shoes > 0) {
-			actions.push('exchange shoes');
+			//actions.push('exchange shoes');
 		}
 
 		if (num_dresses > 0) {
-			actions.push('exchange dress');
+			//actions.push('exchange dress');
 		}
 
 		if (g.dresses.length > 0) {
@@ -220,9 +245,12 @@ function onExchangeDress(data) {
 	console.log('exchange item:' + data.item_id);
 
 	if (this.id == g.player_turn && g.players[this.id].action  == "exchange dress") {
+		console.log(g.players[this.id].name + " can exchange a dress.");
 		if (g.player_order.indexOf(data.exchange_player) >= 0) {
 			if (g.players[data.exchange_player].dresses.length > 0) {
 				// then the exchange player will have to pick a dress to exchange
+				console.log(g.players[this.id].name + " wants to exchange a dress with " + g.players[data.exchange_player].name);
+				console.log("dead end because there is no code to do this part.");
 			} else {
 				// player has no dresses
 				if (g.players[this.id].dresses.indexOf(data.item_id) >= 0) {
@@ -245,6 +273,8 @@ function onExchangeShoes(data) {
 		if (g.player_order.indexOf(data.exchange_player) >= 0) {
 			if (g.players[data.exchange_player].shoes.length > 0) {
 				// then the exchange player will have to pick shoes to exchange
+				console.log(g.players[this.id].name + " wants to exchange shoes with " + g.players[data.exchange_player].name);
+				console.log("dead end because there is no code to do this part.");
 			} else {
 				// player has no shoes
 				if (g.players[this.id].shoes.indexOf(data.item_id) >= 0) {

@@ -6,17 +6,47 @@ var sources = {
 	dresses: 'images/dresses.png'
 };
 
+var my_id = "";
+
 var images = {};
 game.drag_start_x = 0;
 game.drag_start_y = 0;
 
+game.cards = [];
+game.id = 0;
+
 
 $(function () {
+	if (getUrlVars()["id"]) {
+		id = getUrlVars()["id"];
+		console.log("found id: " + id);
+	}
+
 	loadImages(sources, initStage);
 
 	socket = io.connect(null);
+
+	// server is asking for our id
+	socket.on('get_id', function (data) {
+		if (my_id == "") {
+			my_id = data.id;
+		}
+		socket.emit('set_id', {id: my_id});	
+	});
+
 	socket.on('alert', function (data) {
 		window.alert(data.message);
+	});
+	socket.on('disconnect', onDisconnect);
+	socket.on('connect', function () {
+		if (my_id != "") {
+			socket.emit('set_id', {id: my_id});	
+		}
+	});
+	socket.on('reconnect', function () {
+		if (my_id != "") {
+			socket.emit('set_id', {id: my_id});	
+		}
 	});
 
 	socket.on('update', function (data) {
@@ -80,6 +110,9 @@ $(function () {
 		}
 
 		for (p in data.game_state.players) {
+			console.log("display player stuff: " + p);
+
+			// setup offset depending on which player
 			var player_x_offset = 0;
 			var player_y_offset = 0;
 
@@ -102,10 +135,12 @@ $(function () {
 					image_y = (data.game_state.players[p].dresses[d] >= 6 ? 775: 0);
 
 				} else {
+					// show the back if the player does not own the item
 					image_x = 2700;
 					image_y = 0;
 				}
 
+				console.log("creating player dress: " + data.game_state.players[p].dresses[d]);
 				var card = new Kinetic.Image({
 				  x: player_x_offset + ((counter % 6) * 53),
 				  y: player_y_offset,
@@ -117,103 +152,112 @@ $(function () {
 				  image: images.dresses,
 				  draggable: false
 				});
-				card.player = p;
-				card.item_value = data.game_state.players[p].dresses[d];
+				game.id++;
+				game.cardsLayer.add(card);
+				card.setId(game.id);
+				console.log("storing card info for card: " + card.getId());
+				game.cards[card.getId()] = {};
+				game.cards[card.getId()].player = p;
+				game.cards[card.getId()].item_value = data.game_state.players[p].dresses[d];
+				game.cards[card.getId()].startX = card.getX();
+				game.cards[card.getId()].startY = card.getY();
+				console.log("card info" + game.cards[card.getId()]);
 
 				if (data.my_id == data.game_state.player_turn && data.game_state.players[data.my_id].action == 'exchange dress') {
-					card.on('dragstart', function () {
-						// store the original position.
-						game.drag_start_x = this.getX();
-						game.drag_start_y = this.getY();
-					});
 
+					console.log("setting dragend event card:" + card.getId());
 					card.on('dragend', function () { 
 
 						// upper left quadrant
 						if (this.getX() < 320 && this.getY() < 320) {
-							if (this.player != game.game_state.player_order[0]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[0]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].dresses.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange dress', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange dress', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
+
 							}
 						}
 
 						// upper right quadrant
 						if (this.getX() >= 320 && this.getX() < 640 && this.getY() < 320) {
-							if (this.player != game.game_state.player_order[1]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[1]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].dresses.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange dress', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange dress', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
 						// lower left quadrant
 						if (this.getX() < 320 && this.getY() >= 320) {
-							if (this.player != game.game_state.player_order[2]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[2]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].dresses.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange dress', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange dress', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
 						// lower right quadrant
 						if (this.getX() >= 320 && this.getX() < 640 && this.getY() >= 320) {
-							if (this.player != game.game_state.player_order[3]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[3]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].dresses.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange dress', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange dress', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
-					});
+					}); // end of on drag end event
 
 					// if i have dresses then i can only drag mine to initiate an exchange
 					// but if I do not have any, then I can drag a dress from another player
@@ -264,99 +308,103 @@ $(function () {
 				  image: images.shoes,
 				  draggable: false
 				});
-				card.player = p;
-				card.item_value = data.game_state.players[p].shoes[d];
+				game.id++;
+				card.setId(game.id);
+				game.cardsLayer.add(card);
+				game.cards[card.getId()] = {};
+				game.cards[card.getId()].player = p;
+				game.cards[card.getId()].item_value = data.game_state.players[p].shoes[d];
+				game.cards[card.getId()].startX = card.getX();
+				game.cards[card.getId()].startY = card.getY();
 
 				if (data.my_id == data.game_state.player_turn && data.game_state.players[data.my_id].action == 'exchange shoes') {
-					card.on('dragstart', function () {
-						// store the original position.
-						game.drag_start_x = this.getX();
-						game.drag_start_y = this.getY();
-					});
-
 					card.on('dragend', function () { 
 
 						// upper left quadrant
 						if (this.getX() < 320 && this.getY() < 320) {
-							if (this.player != game.game_state.player_order[0]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[0]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].shoes.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange shoes', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange shoes', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
 						// upper right quadrant
 						if (this.getX() >= 320 && this.getX() < 640 && this.getY() < 320) {
-							if (this.player != game.game_state.player_order[1]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[1]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].shoes.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange shoes', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange shoes', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
 						// lower left quadrant
 						if (this.getX() < 320 && this.getY() >= 320) {
-							if (this.player != game.game_state.player_order[2]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[2]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].shoes.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange shoes', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange shoes', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
 						// lower right quadrant
 						if (this.getX() >= 320 && this.getX() < 640 && this.getY() >= 320) {
-							if (this.player != game.game_state.player_order[3]) {
-								if (this.player != game.my_id) {
+							if (game.cards[this.getId()].player != game.game_state.player_order[3]) {
+								if (game.cards[this.getId()].player != game.my_id) {
 									// not my piece
 									if (game.game_state.players[game.my_id].shoes.length == 0) {
 										// i don't have any, so i am getting one from another player.
 										socket.emit('exchange shoes', 
-											{exchange_player: this.player, item_id: ""});
+											{exchange_player: game.cards[this.getId()].player, item_id: ""});
 									} 
 								} else {
 									socket.emit('exchange shoes', 
-										{exchange_player: this.player, item_id: this.item_value});
+										{exchange_player: game.cards[this.getId()].player, item_id: game.cards[this.getId()].item_value});
 								}
 							} else {
 								// reset
-								this.setX(game.drag_start_x);
-								this.setY(game.drag_start_y);
+								console.log("reset the piece: x:" + game.cards[this.getId()].startX + " y: " + game.cards[this.getId()].startY); 
+								this.move(this.getX() - game.cards[this.getId()].startX, this.getY() - game.cards[this.getId()].startY);
+        						game.cardsLayer.draw();
 							}
 						}
 
@@ -446,7 +494,7 @@ $(function () {
 
 			if (data.game_state.players[data.my_id].action == "get dress") {
 				// let the player get a dress
-
+			/*
 		      game.btnRoll  = new Kinetic.Text({
 		        x: 50,
 		        y: 100,
@@ -462,6 +510,7 @@ $(function () {
 				game.btnRoll.on('click', clickRoll);
 			  game.buttonLayer.add(game.btnRoll);
 			  game.buttonLayer.draw();
+			  */
 			}
 
 		}
@@ -531,4 +580,15 @@ function fisherYates ( myArray ) {
 function clickRoll() {
 	console.log("clicked roll button");
 	socket.emit("Roll", {});
+}
+
+function getUrlVars() {
+	var vars = {};
+	var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+		vars[key] = value;
+	});
+	return vars;
+}
+function onDisconnect() {
+	console.log("I have been disconnected.");
 }

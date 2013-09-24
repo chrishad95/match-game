@@ -28,9 +28,11 @@ $(function () {
 
 	// server is asking for our id
 	socket.on('get_id', function (data) {
+		console.log("server is sending me an id: " + data.id);
 		if (my_id == "") {
 			my_id = data.id;
 		}
+		console.log("sending my id back to the server: " + my_id);
 		socket.emit('set_id', {id: my_id});	
 	});
 
@@ -38,11 +40,11 @@ $(function () {
 		window.alert(data.message);
 	});
 	socket.on('disconnect', onDisconnect);
-	socket.on('connect', function () {
-		if (my_id != "") {
-			socket.emit('set_id', {id: my_id});	
-		}
-	});
+//	socket.on('connect', function () {
+//		if (my_id != "") {
+//			socket.emit('set_id', {id: my_id});	
+//		}
+//	});
 	socket.on('reconnect', function () {
 		if (my_id != "") {
 			socket.emit('set_id', {id: my_id});	
@@ -487,7 +489,7 @@ $(function () {
 		        align: 'right'
 		      });
 
-				game.btnRoll.on('click', clickRoll);
+				game.btnRoll.on('click tap', clickRoll);
 			  game.buttonLayer.add(game.btnRoll);
 			  game.buttonLayer.draw();
 			}

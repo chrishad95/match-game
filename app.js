@@ -44,7 +44,6 @@ io.sockets.on('connection', function (socket) {
 
 	socket.emit ('get_id', {id: socket.id});
 	socket.on('set_id', onSetId);
-	
 
 	socket.on('disconnect', onDisconnect );
 	socket.on('update', onUpdate );
@@ -63,6 +62,8 @@ function onSetId(data) {
 	for (p in g.players) {
 		if (g.players[p].disconnected) {
 			if (p == data.id) {
+				console.log("found id of disconnected socket. old: " + p + " new: " + this.id);
+
 				// this player is reconnecting on this socket
 				var new_player = g.players[p];
 				delete g.players[p];
@@ -208,7 +209,7 @@ function onRoll() {
 		}
 
 		if (num_dresses > 0) {
-			//actions.push('exchange dress');
+			actions.push('exchange dress');
 		}
 
 		if (g.dresses.length > 0) {
